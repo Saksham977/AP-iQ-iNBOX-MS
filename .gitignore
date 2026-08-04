@@ -1,0 +1,27 @@
+# Generated data — all contain real financial/vendor content
+data/ledger_cache/
+data/snapshots/
+data/payment_category/
+data/payment_insights/
+data/payment_category_log.jsonl
+data/corrections_log.jsonl
+data/correction-history-*.xlsx
+data/learned_rules.md
+data/proposals/*.json
+
+# Python artefacts
+__pycache__/
+*.pyc
+*.pyo
+*.pkl
+.pytest_cache/
+
+# Claude Code session state — machine-specific
+.claude/
+
+# Logs
+server_out.log
+server_err.log
+
+# Secrets — never commit
+.env
