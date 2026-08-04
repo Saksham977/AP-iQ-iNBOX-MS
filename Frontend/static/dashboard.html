@@ -1,0 +1,1941 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AP Inbox Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<style>
+  :root {
+    /* Light theme — "Nature Intelligence" (default) */
+    --color-bg: #F8FCF9;
+    --color-bg-elevated: #FFFFFF;
+    --color-bg-sunken: #EEFDF3;
+    --color-primary: #15803D;
+    --color-primary-dark: #0F5C2C;
+    --color-primary-light: #22C55E;
+    --color-secondary: #86EFAC;
+    --color-secondary-dark: #4CA96A;
+    --color-accent: #38BDF8;
+    --color-accent-light: #A3E635;
+    --color-text: #0F172A;
+    --color-text-muted: #64748B;
+    --color-border: rgba(15, 23, 42, 0.08);
+    --color-good: #15803D;
+    --color-good-bg: #DCFCE7;
+    --color-bad: #B3261E;
+    --color-bad-bg: #FBE9E7;
+    --color-neutral-bg: #EEFDF3;
+
+    --glass-bg: rgba(255, 255, 255, 0.62);
+    --glass-bg-solid: rgba(255, 255, 255, 0.90);
+    --glass-border: rgba(255, 255, 255, 0.6);
+
+    --font-display: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --font-mono: 'IBM Plex Mono', 'SFMono-Regular', Menlo, monospace;
+
+    --radius-sm: 8px;
+    --radius-md: 14px;
+    --radius-lg: 20px;
+    --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.06);
+    --shadow-md: 0 8px 24px rgba(21, 128, 61, 0.10);
+    --shadow-lg: 0 16px 40px rgba(21, 128, 61, 0.14);
+
+    --transition-fast: 150ms ease;
+    --transition-med: 260ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  [data-theme="dusk"] {
+    /* Alternate theme — "Executive Intelligence": premium navy/blue,
+       Microsoft Copilot/Fabric-inspired. Not pure black. */
+    --color-bg: #0F172A;
+    --color-bg-elevated: #1E293B;
+    --color-bg-sunken: #162033;
+    --color-primary: #2563EB;
+    --color-primary-dark: #1E40AF;
+    --color-primary-light: #3B82F6;
+    --color-secondary: #38BDF8;
+    --color-secondary-dark: #2A96C4;
+    --color-accent: #38BDF8;
+    --color-accent-light: #7DD3FC;
+    --color-text: #F8FAFC;
+    --color-text-muted: #CBD5E1;
+    --color-border: rgba(255, 255, 255, 0.08);
+    --color-good: #22C55E;
+    --color-good-bg: #123322;
+    --color-bad: #F0847A;
+    --color-bad-bg: #3A2020;
+    --color-neutral-bg: #1A2740;
+
+    --glass-bg: rgba(30, 41, 59, 0.55);
+    --glass-bg-solid: rgba(30, 41, 59, 0.92);
+    --glass-border: rgba(255, 255, 255, 0.08);
+
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+    --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.35);
+    --shadow-lg: 0 16px 40px rgba(37, 99, 235, 0.25);
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--color-bg);
+    color: var(--color-text);
+    font-family: var(--font-body);
+    transition: background var(--transition-med), color var(--transition-med);
+    min-height: 100vh;
+  }
+
+  /* "Nature Intelligence" ambient backdrop -- soft green-blue glow. */
+  body {
+    background-image:
+      radial-gradient(circle at 85% 8%, rgba(56, 189, 248, 0.14) 0%, transparent 38%),
+      radial-gradient(circle at 8% 85%, rgba(163, 230, 53, 0.12) 0%, transparent 38%),
+      linear-gradient(135deg, #F8FCF9 0%, #ECFDF5 25%, #E0F2FE 70%, #F8FAFC 100%);
+    background-attachment: fixed;
+  }
+  /* "Executive Intelligence" ambient backdrop -- premium navy/blue glow,
+     never pure black. */
+  [data-theme="dusk"] body {
+    background-image:
+      radial-gradient(circle at 80% 5%, rgba(56, 189, 248, 0.18) 0%, transparent 40%),
+      radial-gradient(circle at 15% 90%, rgba(37, 99, 235, 0.22) 0%, transparent 45%),
+      linear-gradient(135deg, #0F172A 0%, #162033 30%, #1E3A8A 70%, #2563EB 100%);
+  }
+
+  ::selection { background: var(--color-primary-light); color: var(--color-bg-elevated); }
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--color-secondary); border-radius: 10px; }
+
+  .app-shell { display: flex; flex-direction: column; min-height: 100vh; }
+
+  /* The whole top bar is a fixed brand unit -- blue, same as the "com"
+     circle in the MeetingSelect logo -- deliberately NOT theme-swapped,
+     so it looks identical in Day and Night mode. Only the page body below
+     it changes with the theme. */
+  .top-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 28px;
+    background: linear-gradient(135deg, rgba(245, 249, 254, 0.82) 0%, rgba(232, 240, 252, 0.82) 100%);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-bottom: 1px solid #D9E6F7;
+    position: sticky;
+    top: 0;
+    z-index: 40;
+    box-shadow: 0 1px 2px rgba(11, 61, 145, 0.06);
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+
+  .brand { display: flex; align-items: center; gap: 14px; }
+
+  .ms-logo-card {
+    display: inline-flex; align-items: center; justify-content: center;
+    background: #fff; border-radius: var(--radius-sm);
+    padding: 5px 10px; box-shadow: 0 1px 2px rgba(11, 61, 145, 0.08);
+    flex-shrink: 0;
+  }
+  .ms-logo-card img { height: 22px; width: auto; display: block; }
+
+  .brand-divider {
+    width: 1px; height: 30px; background: #D9E6F7; flex-shrink: 0;
+  }
+
+  .brand-name {
+    font-family: var(--font-body);
+    font-weight: 800;
+    font-size: 1.35rem;
+    letter-spacing: -0.01em;
+    color: #0B3D91;
+    white-space: nowrap;
+  }
+  /* The "i" in "iQ" / "iNBOX" is intentionally lowercase amid otherwise
+     uppercase text, echoing "MEETiNG" in the MeetingSelect logo. The whole
+     glyph (stem + its own natural dot) is just colored magenta -- a prior
+     version tried to hide the font's dot and overlay a separately
+     positioned one, which misaligned across renderers; this is simpler
+     and can't drift out of place. */
+  .brand-i { color: #D6237A; }
+  .brand-tagline {
+    font-size: 0.7rem;
+    color: #5B7CA8;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-top: 2px;
+  }
+
+  .top-bar-right { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+
+  .claude-chip {
+    font-size: 0.72rem;
+    padding: 3px 9px;
+    border-radius: 10px;
+    cursor: default;
+    white-space: nowrap;
+    font-weight: 500;
+    transition: background 0.2s, color 0.2s;
+  }
+  .claude-chip.chip-checking { background: #e5e7eb; color: #6b7280; }
+  .claude-chip.chip-ok       { background: #d1fae5; color: #065f46; }
+  .claude-chip.chip-warn     { background: #fef3c7; color: #92400e; }
+  .claude-chip.chip-err      { background: #fee2e2; color: #991b1b; }
+  [data-theme="dusk"] .claude-chip.chip-checking { background: #374151; color: #9ca3af; }
+  [data-theme="dusk"] .claude-chip.chip-ok       { background: #064e3b; color: #6ee7b7; }
+  [data-theme="dusk"] .claude-chip.chip-warn     { background: #78350f; color: #fcd34d; }
+  [data-theme="dusk"] .claude-chip.chip-err      { background: #7f1d1d; color: #fca5a5; }
+
+  .user-chip {
+    display: flex; align-items: center; gap: 9px;
+    background: #fff; border: 1px solid #D9E6F7; border-radius: 999px;
+    padding: 5px 16px 5px 5px;
+  }
+  .user-avatar {
+    width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0;
+    background: #0072CE; color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-body); font-size: 0.72rem; font-weight: 700;
+  }
+  .user-chip input {
+    width: 110px; padding: 0; border: none; background: transparent;
+    color: #0B3D91; font-family: var(--font-body); font-weight: 700; font-size: 0.85rem;
+  }
+  .user-chip input::placeholder { color: #8CA6C9; font-weight: 600; }
+
+  .theme-toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #fff;
+    border: 1px solid #D9E6F7;
+    border-radius: 999px;
+    padding: 7px 14px;
+    cursor: pointer;
+    font-family: var(--font-body);
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #0B3D91;
+    transition: border-color var(--transition-fast);
+  }
+  .theme-toggle:hover { border-color: #0072CE; }
+  .theme-toggle svg { width: 15px; height: 15px; }
+
+  .main-content {
+    flex: 1;
+    width: 100%;
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 28px 28px 80px;
+  }
+
+  .lede {
+    font-size: 0.92rem;
+    color: var(--color-text-muted);
+    max-width: 780px;
+    margin: 0 0 26px;
+    line-height: 1.55;
+  }
+  .lede strong { color: var(--color-text); }
+
+  /* ---------- Accordion groups: each is independent; only genuinely
+     interlinked panels are bundled inside the same group. ---------- */
+  /* Glassmorphism: translucent, blurred, softly bordered cards floating
+     over the ambient gradient backdrop -- no sharp borders, no dark blocks. */
+  details.accordion {
+    background: var(--glass-bg);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-lg);
+    margin-bottom: 20px;
+    box-shadow: var(--shadow-md);
+  }
+  details.accordion > summary {
+    list-style: none;
+    cursor: pointer;
+    padding: 20px 26px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  details.accordion > summary::-webkit-details-marker { display: none; }
+  .accordion-title-wrap { display: flex; flex-direction: column; gap: 2px; }
+  .accordion-title {
+    font-family: var(--font-display);
+    font-size: 1.2rem;
+    font-weight: 800;
+    color: var(--color-primary-dark);
+  }
+  [data-theme="dusk"] .accordion-title { color: var(--color-primary-light); }
+  .accordion-sub { font-size: 0.78rem; color: var(--color-text-muted); font-weight: 500; }
+  .accordion-chevron {
+    width: 20px; height: 20px; flex-shrink: 0; color: var(--color-text-muted);
+    transition: transform var(--transition-fast);
+  }
+  details.accordion[open] > summary .accordion-chevron { transform: rotate(180deg); }
+  .accordion-body {
+    padding: 6px 26px 26px;
+    border-top: 1px solid var(--color-border);
+  }
+
+  .grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-top: 18px;
+  }
+  .full { grid-column: 1 / -1; }
+
+  .panel {
+    background: var(--glass-bg-solid);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-md);
+    padding: 20px 22px;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .panel h3 {
+    font-family: var(--font-display);
+    font-size: 1rem;
+    font-weight: 800;
+    margin: 0 0 14px;
+    color: var(--color-primary-dark);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  [data-theme="dusk"] .panel h3 { color: var(--color-primary-light); }
+  .panel h3 .step {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 22px; height: 22px; border-radius: 50%;
+    background: var(--color-primary); color: #fff;
+    font-size: 0.72rem; font-family: var(--font-body); font-weight: 700;
+    flex-shrink: 0;
+  }
+
+  .muted { color: var(--color-text-muted); font-size: 0.85rem; margin: 0 0 12px; line-height: 1.5; }
+
+  label {
+    display: block;
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--color-text-muted);
+    margin: 12px 0 5px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  input[type=text] {
+    width: 100%;
+    padding: 9px 11px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--color-border);
+    background: var(--color-bg);
+    color: var(--color-text);
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    transition: border-color var(--transition-fast);
+  }
+  input[type=text]:focus { outline: 2px solid var(--color-primary-light); outline-offset: 1px; border-color: var(--color-primary); }
+  input[type=text]::placeholder { color: var(--color-text-muted); opacity: 0.7; }
+
+  select.multi-select {
+    width: 100%;
+    padding: 6px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--color-border);
+    background: var(--color-bg);
+    color: var(--color-text);
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    transition: border-color var(--transition-fast);
+  }
+  select.multi-select:focus { outline: 2px solid var(--color-primary-light); outline-offset: 1px; border-color: var(--color-primary); }
+  select.multi-select option {
+    padding: 4px 6px;
+    border-radius: 3px;
+  }
+  select.multi-select option:checked {
+    background: var(--color-primary);
+    color: #fff;
+  }
+
+  .pi-filter-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 10px 14px;
+    margin-bottom: 4px;
+  }
+  .pi-filter-grid label {
+    display: block;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--color-text-muted);
+    margin-bottom: 4px;
+  }
+  .pi-filter-grid select { height: 92px; }
+
+  .pi-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 12px;
+    margin-top: 10px;
+  }
+  .pi-card {
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    background: var(--glass-bg-solid, var(--color-bg-elevated));
+    padding: 12px 14px;
+    cursor: pointer;
+    transition: border-color var(--transition-fast);
+  }
+  .pi-card:hover { border-color: var(--color-primary); }
+  .pi-card .pi-card-label {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--color-text-muted);
+  }
+  .pi-card .pi-card-count { font-size: 1.4rem; font-weight: 700; color: var(--color-text); margin-top: 2px; }
+  .pi-card .pi-card-total { font-size: 0.82rem; color: var(--color-primary); margin-top: 2px; }
+  .pi-card-rows { margin-top: 8px; }
+
+  .pi-chart-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px 16px;
+    flex-wrap: wrap;
+    margin-bottom: 10px;
+  }
+  .pi-chart-controls label {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--color-text-muted);
+  }
+
+  .pi-report-block {
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    padding: 10px 14px;
+    margin-bottom: 8px;
+    background: var(--glass-bg-solid, var(--color-bg-elevated));
+  }
+  .pi-report-block summary { cursor: pointer; font-weight: 600; }
+
+  .btn {
+    font-family: var(--font-body);
+    font-weight: 700;
+    font-size: 0.85rem;
+    padding: 10px 20px;
+    border-radius: 999px;
+    border: none;
+    cursor: pointer;
+    transition: background var(--transition-fast), box-shadow var(--transition-fast), transform var(--transition-fast);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+  }
+  .btn:active { transform: translateY(1px); }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn-primary {
+    background: linear-gradient(135deg, var(--color-primary-light) 0%, var(--color-primary) 100%);
+    color: #fff; box-shadow: var(--shadow-md); margin-top: 14px;
+  }
+  .btn-primary:hover:not(:disabled) { background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%); box-shadow: var(--shadow-lg); }
+  .btn-secondary { background: var(--glass-bg-solid); color: var(--color-text); border: 1px solid var(--color-border); }
+  .btn-secondary:hover:not(:disabled) { border-color: var(--color-primary); }
+  .btn-small { padding: 6px 12px; font-size: 0.78rem; margin-top: 0; }
+
+  .actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+
+  .status-line { font-size: 0.78rem; color: var(--color-primary-dark); margin-top: 10px; min-height: 14px; }
+  [data-theme="dusk"] .status-line { color: var(--color-primary-light); }
+  .status-line.is-error { color: var(--color-bad); }
+
+  .table-wrap {
+    background: var(--color-bg-elevated);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    margin-top: 6px;
+  }
+  .table-scroll { overflow-x: auto; max-height: 420px; overflow-y: auto; }
+  table.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.8rem;
+    font-family: var(--font-mono);
+  }
+  table.data-table thead th {
+    position: sticky; top: 0; z-index: 5;
+    background: var(--color-primary-dark);
+    color: #fff;
+    font-family: var(--font-body);
+    font-weight: 600;
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 9px 10px;
+    text-align: left;
+    white-space: nowrap;
+  }
+  table.data-table tbody td {
+    padding: 6px 8px;
+    border-bottom: 1px solid var(--color-border);
+    vertical-align: middle;
+  }
+  table.data-table tbody tr:nth-child(even) { background: color-mix(in srgb, var(--color-bg-sunken) 45%, transparent); }
+  table.data-table tbody tr:hover { background: color-mix(in srgb, var(--color-primary) 7%, transparent); }
+  table.data-table input.cell-edit {
+    width: 100%; min-width: 90px; padding: 4px 6px; font-size: 0.78rem;
+    border-radius: 4px; border: 1px solid transparent; background: transparent;
+    color: var(--color-text); font-family: var(--font-mono);
+  }
+  table.data-table input.cell-edit:focus, table.data-table input.cell-edit.dirty {
+    border-color: var(--color-primary); background: var(--color-bg);
+  }
+
+  .tag {
+    display: inline-block; padding: 2px 9px; font-size: 0.68rem; border-radius: 999px;
+    text-transform: uppercase; letter-spacing: 0.03em; font-weight: 700;
+  }
+  .tag-status_override { background: var(--color-bad-bg); color: var(--color-bad); }
+  .tag-match_correction { background: color-mix(in srgb, var(--color-accent) 24%, transparent); color: var(--color-accent); }
+  .tag-amount_or_date_fix { background: var(--color-neutral-bg); color: var(--color-text-muted); }
+  .tag-wording_edit, .tag-generic_edit { background: var(--color-good-bg); color: var(--color-good); }
+  .src-tag {
+    display: inline-block; padding: 1px 8px; font-size: 0.66rem; border-radius: 999px;
+    background: var(--color-neutral-bg); color: var(--color-text-muted); font-weight: 600;
+  }
+
+  .proposal-meta { font-size: 0.8rem; color: var(--color-text-muted); margin-bottom: 6px; }
+  .proposal-box {
+    background: var(--color-bg-elevated);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    padding: 14px;
+    margin-top: 4px;
+    white-space: pre-wrap;
+    font-family: var(--font-mono);
+    font-size: 0.82rem;
+    max-height: 220px;
+    overflow-y: auto;
+  }
+  .proposal-box-label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-text-muted); margin: 10px 0 2px; }
+  .proposal-item { margin-bottom: 18px; }
+  .proposal-item:last-child { margin-bottom: 0; }
+
+  .draft-output {
+    background: var(--color-bg-elevated);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    padding: 14px;
+    margin-top: 10px;
+    white-space: pre-wrap;
+    font-size: 0.88rem;
+    line-height: 1.55;
+    display: none;
+  }
+
+  .empty-note { color: var(--color-text-muted); font-size: 0.85rem; padding: 6px 0; }
+
+  .cache-clear-bar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 28px;
+    border-top: 1px solid var(--color-border);
+    background: var(--color-bg);
+  }
+  .cache-clear-label {
+    font-size: 0.78rem;
+    color: var(--color-text-muted);
+    flex: 0 0 auto;
+  }
+
+  .app-footer {
+    text-align: center;
+    padding: 16px 20px 20px;
+    font-size: 0.76rem;
+    color: var(--color-text-muted);
+    border-top: 1px solid var(--color-border);
+  }
+
+  .pc-type-row { display: flex; gap: 18px; flex-wrap: wrap; margin: 10px 0 4px; }
+  .pc-radio {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 0.85rem; font-weight: 500; text-transform: none; letter-spacing: normal;
+    color: var(--color-text); margin: 0; cursor: pointer;
+  }
+  .pc-radio input { accent-color: var(--color-primary); cursor: pointer; }
+  .pc-input-group { margin-top: 4px; }
+  .pc-download { margin-top: 14px; text-decoration: none; }
+  .pc-results { margin-top: 14px; }
+
+  .warn-note {
+    background: color-mix(in srgb, var(--color-accent) 18%, transparent);
+    color: var(--color-text);
+    border: 1px solid var(--color-accent);
+    border-radius: var(--radius-sm);
+    padding: 10px 14px;
+    font-size: 0.82rem;
+    margin-top: 10px;
+  }
+  .warn-note div { margin: 2px 0; }
+  .info-note {
+    background: var(--color-neutral-bg);
+    color: var(--color-text-muted);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    padding: 8px 14px;
+    font-size: 0.8rem;
+    margin: 10px 0 0;
+  }
+
+  .confidence-badge {
+    display: inline-block; padding: 2px 9px; border-radius: 999px;
+    font-size: 0.7rem; font-weight: 700;
+  }
+  .confidence-High { background: var(--color-good-bg); color: var(--color-good); }
+  .confidence-Medium { background: color-mix(in srgb, var(--color-accent) 24%, transparent); color: var(--color-accent); }
+  .confidence-Low, .confidence-No-match { background: var(--color-bad-bg); color: var(--color-bad); }
+
+  @media (max-width: 860px) {
+    .grid-2 { grid-template-columns: 1fr; }
+    .main-content { padding: 20px 16px 60px; }
+    .top-bar { padding: 12px 16px; }
+    details.accordion > summary { padding: 14px 16px; }
+    .accordion-body { padding: 4px 16px 18px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="app-shell">
+  <div class="top-bar">
+    <div class="brand">
+      <span class="ms-logo-card">
+        <img src="/static/logo.png" alt="MeetingSelect.com">
+      </span>
+      <div class="brand-divider"></div>
+      <div>
+        <div class="brand-name">AP <span class="brand-i">i</span>Q <span class="brand-i">i</span>NBOX</div>
+        <div class="brand-tagline">Working Dashboard</div>
+      </div>
+    </div>
+    <div class="top-bar-right">
+      <span id="claudeStatusChip" class="claude-chip" title="Checking Claude connection…">Claude…</span>
+      <div class="user-chip">
+        <div class="user-avatar" id="userAvatar">AP</div>
+        <input type="text" id="userNameInput" placeholder="Your name">
+      </div>
+      <button class="theme-toggle" id="themeToggle" type="button" aria-label="Toggle theme">
+        <svg id="themeIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></svg>
+        <span id="themeLabel">Night</span>
+      </button>
+    </div>
+  </div>
+
+  <div class="main-content">
+    <p class="lede">
+      Local-only. Claude is called from three places on this page — <strong>Update AI Learning</strong>,
+      <strong>Draft reply</strong>, and <strong>Payment Category</strong>'s screenshot/free-text extraction.
+      Everything else (matching, diffing, logging, corrections) runs on your machine with no API cost.
+      Each section below opens independently — only panels that genuinely feed into each other are grouped together.
+    </p>
+
+    <details class="accordion" id="acc-bulk" open>
+      <summary>
+        <div class="accordion-title-wrap">
+          <span class="accordion-title">Bulk Status &amp; Corrections Detection</span>
+          <span class="accordion-sub">Run the matcher, then diff your hand-edits against the snapshot</span>
+        </div>
+        <svg class="accordion-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+      </summary>
+      <div class="accordion-body">
+        <div class="grid-2">
+
+          <div class="panel">
+            <h3><span class="step">1</span> Run Bulk Status</h3>
+            <label>Business Central export (.xlsx path)</label>
+            <input type="text" id="bcPath" placeholder="/path/to/BC Vendor Ledger Entries.xlsx" oninput="checkLedgerCache('bcPath','bcCacheStatus')">
+            <div id="bcCacheStatus" style="font-size:12px;margin:-4px 0 6px;min-height:16px;"></div>
+            <div style="display:flex;gap:16px;flex-wrap:wrap;margin:8px 0 4px;">
+              <label style="font-weight:normal;cursor:pointer;display:flex;align-items:center;gap:6px;">
+                <input type="radio" name="bulkInputMode" value="file" checked onchange="toggleBulkMode()">
+                Vendor file (.xlsx)
+              </label>
+              <label style="font-weight:normal;cursor:pointer;display:flex;align-items:center;gap:6px;">
+                <input type="radio" name="bulkInputMode" value="table" onchange="toggleBulkMode()">
+                Table (no API cost)
+              </label>
+              <label style="font-weight:normal;cursor:pointer;display:flex;align-items:center;gap:6px;">
+                <input type="radio" name="bulkInputMode" value="text" onchange="toggleBulkMode()">
+                Free text (calls Claude)
+              </label>
+            </div>
+
+            <div id="bulkFileMode">
+              <label>Vendor / venue file (.xlsx path)</label>
+              <input type="text" id="vendorPath" placeholder="/path/to/venue overview.xlsx">
+            </div>
+
+            <div id="bulkTableMode" style="display:none;">
+              <label>Enter invoice / RFP numbers</label>
+              <div style="overflow-x:auto;">
+                <table style="width:100%;border-collapse:collapse;font-size:13px;" id="bulkTableInput">
+                  <thead>
+                    <tr>
+                      <th style="text-align:left;padding:4px 8px;border-bottom:2px solid var(--border);color:var(--text-muted);font-weight:600;white-space:nowrap;">Invoice No.</th>
+                      <th style="text-align:left;padding:4px 8px;border-bottom:2px solid var(--border);color:var(--text-muted);font-weight:600;white-space:nowrap;">RFP No.</th>
+                      <th style="width:32px;border-bottom:2px solid var(--border);"></th>
+                    </tr>
+                  </thead>
+                  <tbody id="bulkTableBody">
+                    <tr>
+                      <td style="padding:3px 4px;"><input class="bulk-inv" type="text" style="width:100%;box-sizing:border-box;padding:5px 8px;border:1px solid var(--border);border-radius:4px;background:var(--input-bg);color:var(--text);font-size:13px;" placeholder="e.g. INV-1234"></td>
+                      <td style="padding:3px 4px;"><input class="bulk-rfp" type="text" style="width:100%;box-sizing:border-box;padding:5px 8px;border:1px solid var(--border);border-radius:4px;background:var(--input-bg);color:var(--text);font-size:13px;" placeholder="e.g. 759259"></td>
+                      <td style="padding:3px 4px;text-align:center;"></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <button type="button" class="btn btn-secondary btn-small" style="margin-top:6px;" onclick="bulkTableAddRow()">+ Add row</button>
+            </div>
+
+            <div id="bulkTextMode" style="display:none;">
+              <label>Paste invoice / RFP numbers (free text)</label>
+              <textarea id="bulkFreeText" rows="5" style="width:100%;box-sizing:border-box;font-family:monospace;font-size:13px;padding:8px;border:1px solid var(--border);border-radius:6px;background:var(--input-bg);color:var(--text);resize:vertical;" placeholder="Paste invoice numbers, factuur numbers, RFP numbers, or a statement…"></textarea>
+            </div>
+
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+              <button class="btn btn-primary" id="bulkRunBtn" onclick="runBulkStatus()">Run matcher (local, no API cost)</button>
+              <button class="btn btn-secondary" onclick="clearBulkStatus()">Clear</button>
+            </div>
+            <div class="status-line" id="bulkStatusMsg"></div>
+          </div>
+
+          <div class="panel">
+            <h3><span class="step">2</span> Detect Excel Corrections</h3>
+            <p class="muted">After you hand-edit the output workbook in Excel, point here at the snapshot + the edited file to diff them. Fully local — mechanical diff + heuristic tagging only.</p>
+            <label>Snapshot path (baseline, from step 1)</label>
+            <input type="text" id="snapshotPath" placeholder="data/snapshots/Status Overview - ...__20260731.xlsx">
+            <label>Current (edited) file path</label>
+            <input type="text" id="currentPath" placeholder="/path/to/Status Overview - ...xlsx">
+            <button class="btn btn-primary" onclick="detectChanges()">Detect changes (local)</button>
+            <div class="status-line" id="detectMsg"></div>
+          </div>
+
+        </div>
+
+        <!-- Bulk Status inline results (shown after Run matcher) -->
+        <div id="bulkResultsWrap" style="display:none; margin-top:18px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+            <span style="font-weight:600; font-size:0.95rem;">Results</span>
+            <button class="btn btn-secondary btn-small" id="bulkDownloadBtn" style="display:none;" onclick="downloadBulkStatus()">Download &amp; send to Detect Corrections (.xlsx)</button>
+          </div>
+          <div class="table-wrap pc-results">
+            <div class="table-scroll">
+              <table class="data-table" id="bulkResultsTable">
+                <thead id="bulkResultsHead"></thead>
+                <tbody id="bulkResultsBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </details>
+
+    <details class="accordion" id="acc-payment-category" open>
+      <summary>
+        <div class="accordion-title-wrap">
+          <span class="accordion-title">Payment Category</span>
+          <span class="accordion-sub">Match a screenshot, email/number, PDF, or Excel against the Vendor Ledger</span>
+        </div>
+        <svg class="accordion-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+      </summary>
+      <div class="accordion-body">
+        <div class="panel full">
+          <h3><span class="step">3</span> Payment Category</h3>
+          <p class="muted">
+            <strong>Screenshot and free-text</strong> go through Claude Sonnet (low effort) to extract fields first —
+            and automatically apply any approved learned rules from the "Corrections &amp; AI Learning" section below.
+            <strong>PDF and Excel, and a bare invoice/RFP number,</strong> are matched directly — no Claude call.
+            Nothing is uploaded; every field below is a local file path on this machine.
+          </p>
+
+          <label>Vendor Ledger file (.xlsx path — same BC export as panel 1)</label>
+          <input type="text" id="pcLedgerPath" placeholder="/path/to/BC Vendor Ledger Entries.xlsx" oninput="checkLedgerCache('pcLedgerPath','pcCacheStatus')">
+          <div id="pcCacheStatus" style="font-size:12px;margin:-4px 0 6px;min-height:16px;"></div>
+
+          <label>Input type</label>
+          <div class="pc-type-row">
+            <label class="pc-radio"><input type="radio" name="pcType" value="image" checked onchange="pcSwitchType()"> Screenshot / Image</label>
+            <label class="pc-radio"><input type="radio" name="pcType" value="text" onchange="pcSwitchType()"> Email / Text</label>
+            <label class="pc-radio"><input type="radio" name="pcType" value="pdf" onchange="pcSwitchType()"> PDF</label>
+            <label class="pc-radio"><input type="radio" name="pcType" value="excel" onchange="pcSwitchType()"> Excel</label>
+          </div>
+
+          <div class="pc-input-group" id="pcGroupImage">
+            <label>Image file path</label>
+            <input type="text" id="pcImagePath" placeholder="/path/to/screenshot.png">
+          </div>
+
+          <div class="pc-input-group" id="pcGroupText" style="display:none;">
+            <label>What are you giving it?</label>
+            <div class="pc-type-row">
+              <label class="pc-radio"><input type="radio" name="pcTextMode" value="number" checked onchange="pcSwitchTextMode()"> Just an invoice or RFP number</label>
+              <label class="pc-radio"><input type="radio" name="pcTextMode" value="text" onchange="pcSwitchTextMode()"> Full email / free text</label>
+            </div>
+            <label id="pcTextValueLabel">Invoice or RFP number</label>
+            <input type="text" id="pcTextValue" placeholder="e.g. INV-00123 or RFP-4521">
+          </div>
+
+          <div class="pc-input-group" id="pcGroupPdf" style="display:none;">
+            <label>PDF file path</label>
+            <input type="text" id="pcPdfPath" placeholder="/path/to/invoice-list.pdf">
+          </div>
+
+          <div class="pc-input-group" id="pcGroupExcel" style="display:none;">
+            <label>Excel file path</label>
+            <input type="text" id="pcExcelPath" placeholder="/path/to/invoices.xlsx">
+          </div>
+
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+            <button class="btn btn-primary" onclick="runPaymentCategory()">Run Payment Category match</button>
+            <button class="btn btn-secondary" onclick="clearPaymentCategory()">Clear</button>
+          </div>
+          <div class="status-line" id="pcMsg"></div>
+          <div id="pcWarnings"></div>
+
+          <div class="table-wrap pc-results" id="pcResultsWrap" style="display:none;">
+            <div class="table-scroll">
+              <table class="data-table" id="pcResultsTable">
+                <thead>
+                  <tr><th>Vendor</th><th>Invoice No.</th><th>RFP No.</th><th>Amount</th><th>Date</th><th>Due Date</th><th>Status</th><th>Remaining Amt. (LCY)</th><th>Remaining Amount Sales Invoice</th><th>Ledger Ref.</th><th>Match</th><th>Confidence</th><th>Source</th><th></th></tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+          <p class="info-note" id="pcCorrectionNote" style="display:none;"></p>
+          <button class="btn btn-secondary btn-small pc-download" id="pcDownloadBtn" style="display:none;" onclick="downloadPaymentCategory()">Download &amp; send to Detect Corrections (.xlsx)</button>
+        </div>
+      </div>
+    </details>
+
+    <details class="accordion" id="acc-payment-insights">
+      <summary>
+        <div class="accordion-title-wrap">
+          <span class="accordion-title">Payment Insights</span>
+          <span class="accordion-sub">Due, overdue, ready-for-payment, and cash-outflow views over the whole Vendor Ledger</span>
+        </div>
+        <svg class="accordion-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+      </summary>
+      <div class="accordion-body">
+        <div class="panel full">
+          <h3><span class="step">4</span> Payment Insights</h3>
+          <p class="muted">
+            Runs over the <strong>whole</strong> Vendor Ledger export (not just what Payment Category looked up above) —
+            no AI call, pure local aggregation. Due/Overdue is computed only from
+            Remaining Amount Sales Invoice = 0 and Remaining Amt. (LCY) ≠ 0, per house rule.
+          </p>
+
+          <label>Vendor Ledger file (.xlsx path — same BC export)</label>
+          <input type="text" id="piLedgerPath" placeholder="/path/to/BC Vendor Ledger Entries.xlsx" oninput="checkLedgerCache('piLedgerPath','piCacheStatus')">
+          <div id="piCacheStatus" style="font-size:12px;margin:-4px 0 6px;min-height:16px;"></div>
+          <button class="btn btn-secondary btn-small" onclick="piUseSameLedger()" style="margin:6px 0 0;">Use same file as Payment Category</button>
+          <button class="btn btn-primary" onclick="piRun()" style="margin-top:10px;">Run Payment Insights</button>
+          <div class="status-line" id="piMsg"></div>
+
+          <div id="piFiltersWrap" style="display:none;">
+            <h4 style="margin-top:18px;">Filters</h4>
+            <p class="muted">Options are populated from the loaded ledger — select one or more values per column, then Apply. Leave a dropdown empty to not filter on it.</p>
+            <div class="pi-filter-grid" id="piFilterGrid"></div>
+            <div class="actions">
+              <button class="btn btn-secondary btn-small" onclick="piApplyFilters()">Apply filters</button>
+              <button class="btn btn-secondary btn-small" onclick="piResetFilters()">Reset filters</button>
+            </div>
+          </div>
+
+          <div id="piResultsWrap" style="display:none;">
+            <p class="info-note" id="piRowCountNote" style="margin-top:14px;"></p>
+
+            <div class="pi-cards" id="piCards"></div>
+
+            <h4 style="margin-top:20px;">Chart</h4>
+            <div class="pi-chart-controls">
+              <label>Insight category</label>
+              <select id="piChartCategory" class="multi-select" style="width:auto;" onchange="piRenderChart()"></select>
+              <label>Chart type</label>
+              <select id="piChartType" class="multi-select" style="width:auto;" onchange="piRenderChart()">
+                <option value="bar">Bar</option>
+                <option value="line">Line</option>
+                <option value="pie">Pie</option>
+                <option value="histogram">Histogram</option>
+              </select>
+            </div>
+            <div style="max-width:720px;">
+              <canvas id="piChartCanvas" height="280"></canvas>
+            </div>
+
+            <h4 style="margin-top:20px;">Additional Reports</h4>
+            <div id="piReports"></div>
+
+            <a class="btn btn-secondary btn-small pc-download" id="piDownloadLink" style="display:none; margin-top:14px;" href="#">Download all insights &amp; reports (.xlsx, one sheet per category)</a>
+          </div>
+        </div>
+      </div>
+    </details>
+
+    <details class="accordion" id="acc-draft">
+      <summary>
+        <div class="accordion-title-wrap">
+          <span class="accordion-title">Draft Reply</span>
+          <span class="accordion-sub">Per invoice, on demand — unchanged model, unchanged behavior</span>
+        </div>
+        <svg class="accordion-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+      </summary>
+      <div class="accordion-body">
+        <div class="panel full">
+          <h3><span class="step">5</span> Draft Reply (per row, on demand)</h3>
+          <p class="muted">Only fires when you click "Draft." Vendor email text is optional — leave blank unless you have a specific email to respond to for this row.</p>
+          <label>Invoice number</label>
+          <input type="text" id="draftInvoice">
+          <label>RFP number (optional)</label>
+          <input type="text" id="draftRfp">
+          <label>Current Status update (select one or more — matches the "Status update" column bulk-status produces)</label>
+          <select id="draftStatus" multiple size="4" class="multi-select">
+            <option value="Paid">Paid</option>
+            <option value="Open – not yet due">Open – not yet due</option>
+            <option value="Overdue – payment pending">Overdue – payment pending</option>
+            <option value="Not found in our records">Not found in our records</option>
+            <option value="Paid (discrepancy – please verify)">Paid (discrepancy – please verify)</option>
+            <option value="Open – not yet due (discrepancy – please verify)">Open – not yet due (discrepancy – please verify)</option>
+            <option value="Overdue – payment pending (discrepancy – please verify)">Overdue – payment pending (discrepancy – please verify)</option>
+          </select>
+          <label>Current Match status (select one or more — matches the "Match status" column bulk-status produces)</label>
+          <select id="draftMatchStatus" multiple size="3" class="multi-select">
+            <option value="Matched">Matched</option>
+            <option value="Discrepancy">Discrepancy</option>
+            <option value="Not found">Not found</option>
+          </select>
+          <label>Vendor email text for this reply (optional — paste only if relevant)</label>
+          <input type="text" id="draftVendorEmail" placeholder="Leave blank unless you have specific email context to respond to">
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+            <button class="btn btn-primary" onclick="draftReply()">Draft reply (calls Claude)</button>
+            <button class="btn btn-secondary" onclick="clearDraftReply()">Clear</button>
+          </div>
+          <div class="status-line" id="draftMsg"></div>
+          <div class="draft-output" id="draftOutput"></div>
+        </div>
+      </div>
+    </details>
+
+    <details class="accordion" id="acc-learning" open>
+      <summary>
+        <div class="accordion-title-wrap">
+          <span class="accordion-title">Corrections &amp; AI Learning</span>
+          <span class="accordion-sub">Lifetime correction history, review queue, and the learning loop that feeds it back in</span>
+        </div>
+        <svg class="accordion-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+      </summary>
+      <div class="accordion-body">
+        <div class="grid-2">
+
+          <div class="panel full">
+            <h3><span class="step">6</span> Corrections Log</h3>
+            <p class="muted">Every correction ever made — whether detected from an Excel hand-edit (panel 2) or entered directly on a Payment Category result — lands here, forever. This is the lifetime correction history.</p>
+            <div class="actions">
+              <button class="btn btn-secondary btn-small" onclick="loadCorrections(true)">Show unreviewed only</button>
+              <button class="btn btn-secondary btn-small" onclick="loadCorrections(false)">Show all</button>
+              <a class="btn btn-secondary btn-small" href="/api/corrections/export">Download all corrections (.xlsx)</a>
+            </div>
+            <div class="table-wrap">
+              <div class="table-scroll">
+                <table class="data-table" id="correctionsTable">
+                  <thead>
+                    <tr><th>Time</th><th>Invoice</th><th>RFP</th><th>Column</th><th>Old</th><th>New</th><th>Type</th><th>Source</th><th>User</th><th>Reviewed</th><th></th></tr>
+                  </thead>
+                  <tbody></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel">
+            <h3><span class="step">7</span> Update AI Learning</h3>
+            <p class="muted">Batches all unreviewed corrections — from Excel hand-edits <em>and</em> from Payment Category — and asks Claude for two things: an updated classifier detection block (from the Excel-side corrections), and a set of general extraction rules (from the Payment Category-side corrections). Nothing is auto-applied; both need your approval below.</p>
+            <label>Category (for the classifier block)</label>
+            <input type="text" id="categoryInput" value="Payment Status">
+            <button class="btn btn-primary" onclick="updateClassifier()">Update AI Learning from corrections (calls Claude)</button>
+            <div class="status-line" id="classifierMsg"></div>
+          </div>
+
+          <div class="panel">
+            <h3>Proposals awaiting review</h3>
+            <p class="muted">Approving a proposal's learned rules makes them apply automatically to future Payment Category image/text extraction.</p>
+            <!-- Approving the classifier block here only marks it approved --
+                 it does NOT write to SKILL.md. That still needs a manual edit
+                 in a Claude Code session with access to
+                 /mnt/skills/user/ap-category-parameters/ (see README's
+                 "Update AI Learning" section for the full explanation). -->
+            <div id="proposalsList"></div>
+          </div>
+
+        </div>
+      </div>
+    </details>
+
+  </div>
+
+  <div class="cache-clear-bar">
+    <span class="cache-clear-label">Ledger cache</span>
+    <button class="btn btn-secondary btn-small" id="clearCacheBtn" onclick="clearLedgerCache()">Clear cache</button>
+    <span id="clearCacheMsg" style="font-size:12px;"></span>
+  </div>
+
+  <div class="app-footer">AP Inbox Dashboard · runs entirely on localhost · no data leaves your machine except the three Claude call sites above · Designed and BUILD by SAKSHAM SETIA</div>
+</div>
+
+<script>
+const API = "";
+
+const SUN_ICON = '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>';
+const MOON_ICON = '<path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"/>';
+
+function applyTheme(theme) {
+  if (theme === "dusk") {
+    document.documentElement.setAttribute("data-theme", "dusk");
+    document.getElementById("themeIcon").innerHTML = SUN_ICON;
+    document.getElementById("themeLabel").textContent = "Day";
+  } else {
+    document.documentElement.removeAttribute("data-theme");
+    document.getElementById("themeIcon").innerHTML = MOON_ICON;
+    document.getElementById("themeLabel").textContent = "Night";
+  }
+  localStorage.setItem("ap-dashboard-theme", theme);
+}
+
+(function initTheme() {
+  const saved = localStorage.getItem("ap-dashboard-theme");
+  const prefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+  applyTheme(saved || (prefersDark ? "dusk" : "light"));
+})();
+
+document.getElementById("themeToggle").addEventListener("click", () => {
+  const isDusk = document.documentElement.getAttribute("data-theme") === "dusk";
+  applyTheme(isDusk ? "light" : "dusk");
+});
+
+// Persist "Your name" across sessions, and remember each accordion's
+// open/closed state independently so panels stay the way you left them.
+const userNameInput = document.getElementById("userNameInput");
+const userAvatar = document.getElementById("userAvatar");
+
+function updateUserAvatar(name) {
+  const words = name.trim().split(/\s+/).filter(Boolean);
+  if (!words.length) { userAvatar.textContent = "AP"; return; }
+  const initials = words.length === 1 ? words[0].slice(0, 2) : words[0][0] + words[1][0];
+  userAvatar.textContent = initials.toUpperCase();
+}
+
+userNameInput.value = localStorage.getItem("ap-dashboard-username") || "";
+updateUserAvatar(userNameInput.value);
+userNameInput.addEventListener("input", () => {
+  localStorage.setItem("ap-dashboard-username", userNameInput.value);
+  updateUserAvatar(userNameInput.value);
+});
+
+document.querySelectorAll("details.accordion").forEach(details => {
+  const key = "ap-dashboard-accordion-" + details.id;
+  const saved = localStorage.getItem(key);
+  if (saved !== null) details.open = saved === "1";
+  details.addEventListener("toggle", () => {
+    localStorage.setItem(key, details.open ? "1" : "0");
+  });
+});
+
+async function post(path, body) {
+  const res = await fetch(API + path, {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify(body || {}),
+  });
+  return res.json();
+}
+async function get(path) {
+  const res = await fetch(API + path);
+  return res.json();
+}
+
+function setMsg(el, text, isError) {
+  el.textContent = text;
+  el.classList.toggle("is-error", !!isError);
+}
+
+// Debounce timer so we don't fire a request on every keystroke
+const _cacheCheckTimers = {};
+function checkLedgerCache(inputId, statusId) {
+  clearTimeout(_cacheCheckTimers[inputId]);
+  const statusEl = document.getElementById(statusId);
+  if (!statusEl) return;
+  const path = (document.getElementById(inputId)?.value || "").trim();
+  if (!path) { statusEl.innerHTML = ""; return; }
+  statusEl.innerHTML = '<span style="color:#888;">checking cache…</span>';
+  _cacheCheckTimers[inputId] = setTimeout(async () => {
+    try {
+      const res = await fetch(API + "/api/ledger-cache-status?path=" + encodeURIComponent(path));
+      const d = await res.json();
+      if (!d || d.size_mb === 0) { statusEl.innerHTML = ""; return; }
+      if (d.in_memory) {
+        statusEl.innerHTML = '<span style="color:#2e7d32;">&#10003; Already loaded in memory (instant)</span>';
+      } else if (d.cached) {
+        statusEl.innerHTML = '<span style="color:#2e7d32;">&#10003; Disk cache found — will load in seconds after server restart</span>';
+      } else {
+        statusEl.innerHTML =
+          '<span style="color:#b45309;">&#9888; No cache yet — first load will parse ' +
+          d.size_mb + ' MB (may take a few minutes). Subsequent loads will be instant.</span>';
+      }
+    } catch (_) { statusEl.innerHTML = ""; }
+  }, 600);
+}
+
+// Open the Bulk Status panel 1 accordion if it's collapsed, scroll to it,
+// then open the Detect Corrections panel 2 and scroll to it as well.
+function _openAndScrollToDetect() {
+  // Open Detect Excel Corrections accordion (it sits inside the same Bulk Status accordion)
+  const bulkAcc = document.getElementById("acc-bulk-status");
+  if (bulkAcc && !bulkAcc.open) bulkAcc.open = true;
+  setTimeout(() => {
+    const detectPanel = document.getElementById("snapshotPath");
+    if (detectPanel) detectPanel.closest(".panel")?.scrollIntoView({behavior: "smooth", block: "center"});
+  }, 120);
+}
+
+function downloadBulkStatus() {
+  const btn = document.getElementById("bulkDownloadBtn");
+  const filename     = btn.dataset.filename     || "";
+  const snapshotPath = btn.dataset.snapshotPath || "";
+  const outputPath   = btn.dataset.outputPath   || "";
+  if (!filename) return;
+
+  // Trigger browser file download
+  const a = document.createElement("a");
+  a.href = `/api/bulk-status/download/${encodeURIComponent(filename)}`;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+
+  // Pre-fill Detect Excel Corrections paths
+  document.getElementById("snapshotPath").value = snapshotPath;
+  document.getElementById("currentPath").value  = outputPath;
+
+  // Scroll to the Detect Corrections panel
+  _openAndScrollToDetect();
+}
+
+function downloadPaymentCategory() {
+  const btn = document.getElementById("pcDownloadBtn");
+  const filename   = btn.dataset.filename   || "";
+  const outputPath = btn.dataset.outputPath || "";
+  if (!filename) return;
+
+  // Trigger browser file download
+  const a = document.createElement("a");
+  a.href = `/api/payment-category/download/${encodeURIComponent(filename)}`;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+
+  // Use the PC output as the snapshot baseline for Detect Corrections
+  document.getElementById("snapshotPath").value = outputPath;
+  document.getElementById("currentPath").value  = "";
+
+  // Scroll to the Detect Corrections panel
+  _openAndScrollToDetect();
+}
+
+function toggleBulkMode() {
+  const mode = document.querySelector('input[name="bulkInputMode"]:checked').value;
+  document.getElementById("bulkFileMode").style.display  = mode === "file"  ? "" : "none";
+  document.getElementById("bulkTableMode").style.display = mode === "table" ? "" : "none";
+  document.getElementById("bulkTextMode").style.display  = mode === "text"  ? "" : "none";
+  document.getElementById("bulkRunBtn").textContent =
+    mode === "text" ? "Run matcher (calls Claude)" : "Run matcher (local, no API cost)";
+}
+
+function clearBulkStatus() {
+  // Inputs (BC export path is preserved — user clears it manually)
+  document.getElementById("vendorPath").value = "";
+  document.getElementById("bulkFreeText").value = "";
+  // Reset table to a single empty row
+  document.getElementById("bulkTableBody").innerHTML = `
+    <tr>
+      <td style="padding:3px 4px;"><input class="bulk-inv" type="text" style="width:100%;box-sizing:border-box;padding:5px 8px;border:1px solid var(--border);border-radius:4px;background:var(--input-bg);color:var(--text);font-size:13px;" placeholder="e.g. INV-1234"></td>
+      <td style="padding:3px 4px;"><input class="bulk-rfp" type="text" style="width:100%;box-sizing:border-box;padding:5px 8px;border:1px solid var(--border);border-radius:4px;background:var(--input-bg);color:var(--text);font-size:13px;" placeholder="e.g. 759259"></td>
+      <td style="padding:3px 4px;text-align:center;"></td>
+    </tr>`;
+  // Reset mode to file
+  document.querySelector('input[name="bulkInputMode"][value="file"]').checked = true;
+  toggleBulkMode();
+  // Status & results
+  setMsg(document.getElementById("bulkStatusMsg"), "");
+  document.getElementById("snapshotPath").value = "";
+  document.getElementById("currentPath").value = "";
+  document.getElementById("bulkResultsWrap").style.display = "none";
+  document.getElementById("bulkDownloadBtn").style.display = "none";
+  document.getElementById("bulkResultsHead").innerHTML = "";
+  document.getElementById("bulkResultsBody").innerHTML = "";
+}
+
+function clearPaymentCategory() {
+  // Inputs (ledger path is preserved — user clears it manually)
+  document.getElementById("pcImagePath").value = "";
+  document.getElementById("pcTextValue").value = "";
+  document.getElementById("pcPdfPath").value = "";
+  document.getElementById("pcExcelPath").value = "";
+  // Reset type to image (first option)
+  const firstType = document.querySelector('input[name="pcType"]');
+  if (firstType) { firstType.checked = true; firstType.dispatchEvent(new Event("change")); }
+  // Reset text sub-mode to number
+  const firstTextMode = document.querySelector('input[name="pcTextMode"]');
+  if (firstTextMode) firstTextMode.checked = true;
+  // Status, warnings, results
+  setMsg(document.getElementById("pcMsg"), "");
+  document.getElementById("pcWarnings").innerHTML = "";
+  const wrap = document.getElementById("pcResultsWrap");
+  if (wrap) wrap.style.display = "none";
+  const dl = document.getElementById("pcDownloadBtn");
+  if (dl) { dl.style.display = "none"; }
+  const note = document.getElementById("pcCorrectionNote");
+  if (note) note.style.display = "none";
+  const tbody = document.querySelector("#pcResultsTable tbody");
+  if (tbody) tbody.innerHTML = "";
+}
+
+function clearDraftReply() {
+  document.getElementById("draftInvoice").value = "";
+  document.getElementById("draftRfp").value = "";
+  // Deselect all options in multi-selects
+  Array.from(document.getElementById("draftStatus").options).forEach(o => o.selected = false);
+  Array.from(document.getElementById("draftMatchStatus").options).forEach(o => o.selected = false);
+  document.getElementById("draftVendorEmail").value = "";
+  setMsg(document.getElementById("draftMsg"), "");
+  document.getElementById("draftOutput").textContent = "";
+}
+
+function bulkTableAddRow() {
+  const tbody = document.getElementById("bulkTableBody");
+  const tr = document.createElement("tr");
+  tr.innerHTML = `
+    <td style="padding:3px 4px;"><input class="bulk-inv" type="text" style="width:100%;box-sizing:border-box;padding:5px 8px;border:1px solid var(--border);border-radius:4px;background:var(--input-bg);color:var(--text);font-size:13px;" placeholder="e.g. INV-1234"></td>
+    <td style="padding:3px 4px;"><input class="bulk-rfp" type="text" style="width:100%;box-sizing:border-box;padding:5px 8px;border:1px solid var(--border);border-radius:4px;background:var(--input-bg);color:var(--text);font-size:13px;" placeholder="e.g. 759259"></td>
+    <td style="padding:3px 4px;text-align:center;"><button type="button" onclick="this.closest('tr').remove()" style="background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:16px;line-height:1;" title="Remove row">×</button></td>
+  `;
+  tbody.appendChild(tr);
+  tr.querySelector(".bulk-inv").focus();
+}
+
+function bulkStatusCell(col, val) {
+  if (!val) return "";
+  if (col === "Match status") {
+    if (val === "Matched")      return `<span class="confidence-badge confidence-High">${val}</span>`;
+    if (val === "Discrepancy")  return `<span class="confidence-badge confidence-Low">${val}</span>`;
+    if (val === "Not found")    return `<span class="confidence-badge confidence-No-match">${val}</span>`;
+  }
+  if (col === "Status update") {
+    const lower = val.toLowerCase();
+    let cls = "";
+    if (lower.startsWith("paid"))        cls = "confidence-High";
+    else if (lower.startsWith("open"))   cls = "confidence-Medium";
+    else if (lower.startsWith("overdue")) cls = "confidence-Low";
+    else if (lower.startsWith("not found")) cls = "confidence-No-match";
+    if (lower.includes("discrepancy"))   cls = "confidence-Low";
+    if (cls) return `<span class="confidence-badge ${cls}">${val}</span>`;
+  }
+  if (col === "Client Status") {
+    const lower = val.toLowerCase();
+    let cls = "";
+    if (val === "—") return val;
+    if (lower.startsWith("already paid"))              cls = "confidence-High";
+    else if (lower.startsWith("paid by client") && lower.includes("overdue")) cls = "confidence-Low";
+    else if (lower.startsWith("paid by client"))       cls = "confidence-High";
+    else if (lower.startsWith("due, not paid"))        cls = "confidence-Low";
+    else if (lower.startsWith("overdue"))              cls = "confidence-Low";
+    else if (lower.startsWith("will be due") || lower.startsWith("not due")) cls = "confidence-Medium";
+    if (cls) return `<span class="confidence-badge ${cls}">${val}</span>`;
+  }
+  return val;
+}
+
+function computeClientStatus(row) {
+  const status = (row["Status update"] || "").toLowerCase();
+  if (status.startsWith("paid")) return "Already paid";
+  if (status.startsWith("not found")) return "—";
+
+  // Parse "BC: Remaining Amt. Sales Invoice" — 0 means client paid us
+  const rawSales = row["BC: Remaining Amt. Sales Invoice"];
+  const salesAmt = (rawSales === "" || rawSales === null || rawSales === undefined)
+    ? null : parseFloat(rawSales);
+  const clientPaid   = salesAmt !== null && !isNaN(salesAmt) && salesAmt === 0;
+  const clientUnpaid = salesAmt !== null && !isNaN(salesAmt) && salesAmt !== 0;
+
+  // Parse "BC: Due Date" — server returns "dd-mm-yyyy"
+  const dueDateStr = row["BC: Due Date"] || "";
+  let daysUntilDue = null;
+  if (dueDateStr) {
+    const parts = dueDateStr.split("-");
+    if (parts.length === 3 && parts[2].length === 4) {
+      const due = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
+      if (!isNaN(due.getTime())) {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        due.setHours(0, 0, 0, 0);
+        daysUntilDue = Math.round((due - today) / (1000 * 60 * 60 * 24));
+      }
+    }
+  }
+
+  if (clientUnpaid) {
+    const timing = daysUntilDue !== null
+      ? (daysUntilDue < 0 ? ` (overdue ${Math.abs(daysUntilDue)}d)` : ` (due in ${daysUntilDue}d)`)
+      : "";
+    return `Due, not paid by client${timing}`;
+  }
+
+  if (clientPaid) {
+    if (daysUntilDue === null)  return "Paid by client";
+    if (daysUntilDue < 0)       return `Paid by client — overdue by ${Math.abs(daysUntilDue)} days`;
+    if (daysUntilDue === 0)     return "Paid by client — due today";
+    return `Paid by client — due in ${daysUntilDue} days`;
+  }
+
+  // Sales invoice column not available — fall back to due-date timing only
+  if (daysUntilDue !== null) {
+    if (daysUntilDue < 0)  return `Overdue by ${Math.abs(daysUntilDue)} days`;
+    if (daysUntilDue === 0) return "Due today";
+    return `Will be due in ${daysUntilDue} days`;
+  }
+
+  return "—";
+}
+
+function renderBulkResults(headers, rows) {
+  const allHeaders = [...headers, "Client Status"];
+  document.getElementById("bulkResultsHead").innerHTML =
+    "<tr>" + allHeaders.map(h => `<th>${h}</th>`).join("") + "</tr>";
+  const tbody = document.getElementById("bulkResultsBody");
+  tbody.innerHTML = "";
+  rows.forEach(r => {
+    const tr = document.createElement("tr");
+    const clientStatus = computeClientStatus(r);
+    tr.innerHTML = headers.map(h => `<td>${bulkStatusCell(h, r[h] ?? "")}</td>`).join("")
+      + `<td>${bulkStatusCell("Client Status", clientStatus)}</td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+async function runBulkStatus() {
+  const bc_export_path = document.getElementById("bcPath").value;
+  const msg = document.getElementById("bulkStatusMsg");
+  const mode = document.querySelector('input[name="bulkInputMode"]:checked').value;
+
+  // Reset previous results
+  document.getElementById("bulkResultsWrap").style.display = "none";
+  document.getElementById("bulkDownloadBtn").style.display = "none";
+
+  let payload;
+  if (mode === "file") {
+    const vendor_file_path = document.getElementById("vendorPath").value;
+    setMsg(msg, "Running matcher locally...");
+    payload = {bc_export_path, vendor_file_path};
+  } else if (mode === "table") {
+    const invInputs = document.querySelectorAll("#bulkTableBody .bulk-inv");
+    const rfpInputs = document.querySelectorAll("#bulkTableBody .bulk-rfp");
+    const table_rows = [];
+    invInputs.forEach((inv, i) => {
+      const invoice_no = inv.value.trim();
+      const rfp_no = rfpInputs[i] ? rfpInputs[i].value.trim() : "";
+      if (invoice_no || rfp_no) table_rows.push({invoice_no, rfp_no});
+    });
+    if (!table_rows.length) { setMsg(msg, "Enter at least one invoice or RFP number.", true); return; }
+    setMsg(msg, "Matching against BC ledger (no API cost)...");
+    payload = {bc_export_path, table_rows};
+  } else {
+    const free_text = document.getElementById("bulkFreeText").value.trim();
+    if (!free_text) { setMsg(msg, "Paste some invoice or RFP numbers first.", true); return; }
+    setMsg(msg, "Extracting invoice numbers via Claude, then matching...");
+    payload = {bc_export_path, free_text};
+  }
+
+  const data = await post("/api/run-bulk-status", payload);
+  if (data.error) {
+    setMsg(msg, "Error: " + data.error + (data.stderr ? " — " + data.stderr.trim() : ""), true);
+    return;
+  }
+
+  const matched = (data.rows || []).filter(r => r["Match status"] === "Matched").length;
+  const total   = (data.rows || []).length;
+  setMsg(msg, `Done — ${total} row(s), ${matched} matched. Click Download to save and track in Detect Corrections.`);
+
+  // Carry ledger path to Payment Category if not already set
+  const pcLedger = document.getElementById("pcLedgerPath");
+  if (pcLedger && !pcLedger.value) {
+    pcLedger.value = bc_export_path;
+    checkLedgerCache("pcLedgerPath", "pcCacheStatus");
+  }
+
+  if (data.headers && data.rows && data.rows.length > 0) {
+    renderBulkResults(data.headers, data.rows);
+    document.getElementById("bulkResultsWrap").style.display = "block";
+    // Store result paths for Download button — don't populate Detect Corrections yet
+    const btn = document.getElementById("bulkDownloadBtn");
+    btn.dataset.snapshotPath = data.snapshot_path || "";
+    btn.dataset.outputPath   = data.output_path   || "";
+    btn.dataset.filename     = data.excel_filename || "";
+    btn.style.display = "inline-flex";
+  }
+}
+
+async function detectChanges() {
+  const snapshot_path = document.getElementById("snapshotPath").value;
+  const current_path = document.getElementById("currentPath").value;
+  const msg = document.getElementById("detectMsg");
+  setMsg(msg, "Diffing locally...");
+  const data = await post("/api/detect-changes", {snapshot_path, current_path});
+  if (data.error) { setMsg(msg, "Error: " + data.error, true); return; }
+  setMsg(msg, `Detected ${data.detected} change(s). See log below.`);
+  loadCorrections(true);
+}
+
+async function loadCorrections(unreviewedOnly) {
+  const data = await get(`/api/corrections?unreviewed_only=${unreviewedOnly}`);
+  const tbody = document.querySelector("#correctionsTable tbody");
+  tbody.innerHTML = "";
+  if (!data.length) {
+    tbody.innerHTML = `<tr><td colspan="11" class="empty-note">No corrections logged yet.</td></tr>`;
+    return;
+  }
+  data.forEach(c => {
+    const tr = document.createElement("tr");
+    const source = c.source || "excel_diff";
+    const statusGuess = c.column === "Status" ? (c.new_value || "") : "";
+    const matchGuess = c.column === "Match status" || c.column === "Ledger Ref." ? (c.new_value || "") : "";
+    tr.innerHTML = `
+      <td>${c.timestamp || ""}</td>
+      <td>${c.invoice_no || ""}</td>
+      <td>${c.rfp_no || ""}</td>
+      <td>${c.column || ""}</td>
+      <td>${c.old_value ?? ""}</td>
+      <td>${c.new_value ?? ""}</td>
+      <td><span class="tag tag-${c.correction_type}">${c.correction_type}</span></td>
+      <td><span class="src-tag">${source}</span></td>
+      <td>${c.user || ""}</td>
+      <td>${c.reviewed ? "yes" : "no"}</td>
+      <td>${c.invoice_no ? `<button class="btn btn-secondary btn-small" onclick='quickDraftReply(${JSON.stringify(c.invoice_no)}, ${JSON.stringify(c.rfp_no || "")}, ${JSON.stringify(statusGuess)}, ${JSON.stringify(matchGuess)})'>Draft reply</button>` : ""}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+async function updateClassifier() {
+  const category = document.getElementById("categoryInput").value;
+  const msg = document.getElementById("classifierMsg");
+  setMsg(msg, "Calling Claude with batched corrections...");
+  const data = await post("/api/update-classifier", {category});
+  if (data.error) { setMsg(msg, "Error: " + data.error, true); return; }
+  if (data.message) { setMsg(msg, data.message); return; }
+  setMsg(msg, `Proposal saved: ${data.proposal_path}`);
+  loadProposals();
+}
+
+async function loadProposals() {
+  const data = await get("/api/proposals");
+  const container = document.getElementById("proposalsList");
+  container.innerHTML = "";
+  data.filter(p => p.status === "pending").forEach(p => {
+    const filename = p._path.split("/").pop().split("\\").pop();
+    const div = document.createElement("div");
+    div.className = "proposal-item";
+    const rulesBlock = p.learned_rules_text && p.learned_rules_text !== "No new rules."
+      ? `<div class="proposal-box-label">Learned extraction rules (Payment Category)</div><div class="proposal-box">${p.learned_rules_text.replace(/</g,"&lt;")}</div>`
+      : "";
+    div.innerHTML = `
+      <div class="proposal-meta">${p.category} · created ${p.created} · ${p.corrections_used.length} correction(s) used</div>
+      <div class="proposal-box-label">Classifier detection block</div>
+      <div class="proposal-box">${(p.proposed_block || "").replace(/</g,"&lt;")}</div>
+      ${rulesBlock}
+      <div class="actions" style="margin-top:8px;">
+        <button class="btn btn-primary btn-small" onclick="decideProposal('${filename}','approve')">Approve</button>
+        <button class="btn btn-secondary btn-small" onclick="decideProposal('${filename}','reject')">Reject</button>
+      </div>
+    `;
+    container.appendChild(div);
+  });
+  if (!data.some(p => p.status === "pending")) {
+    container.innerHTML = '<p class="empty-note">No pending proposals.</p>';
+  }
+}
+
+async function decideProposal(filename, decision) {
+  await post(`/api/proposals/${filename}/decide`, {decision});
+  loadProposals();
+  loadCorrections(true);
+}
+
+function getSelectedValues(selectEl) {
+  return Array.from(selectEl.selectedOptions).map(o => o.value).join("; ");
+}
+
+function setSelectedValues(selectEl, value) {
+  const wanted = (value || "").split(";").map(v => v.trim()).filter(Boolean);
+  for (const opt of selectEl.options) {
+    opt.selected = wanted.some(w => w.toLowerCase() === opt.value.toLowerCase());
+  }
+}
+
+async function draftReply() {
+  const invoice_no = document.getElementById("draftInvoice").value;
+  const rfp_no = document.getElementById("draftRfp").value;
+  const current_status = getSelectedValues(document.getElementById("draftStatus"));
+  const match_status = getSelectedValues(document.getElementById("draftMatchStatus"));
+  const vendor_email_text = document.getElementById("draftVendorEmail").value;
+  const msg = document.getElementById("draftMsg");
+  setMsg(msg, "Calling Claude...");
+  const data = await post("/api/draft-reply", {invoice_no, rfp_no, current_status, match_status, vendor_email_text});
+  if (data.error) { setMsg(msg, "Error: " + data.error, true); return; }
+  setMsg(msg, "Draft ready — review before sending.");
+  const out = document.getElementById("draftOutput");
+  out.style.display = "block";
+  out.textContent = data.draft;
+}
+
+// Draft Reply is useful from anywhere an invoice row already exists
+// (Corrections Log, Payment Category results) -- this pre-fills the Draft
+// Reply panel from that row and jumps to it, but never fires the Claude
+// call itself; you still click "Draft reply" there to confirm.
+function quickDraftReply(invoice_no, rfp_no, current_status, match_status) {
+  document.getElementById("draftInvoice").value = invoice_no || "";
+  document.getElementById("draftRfp").value = rfp_no || "";
+  setSelectedValues(document.getElementById("draftStatus"), current_status || "");
+  setSelectedValues(document.getElementById("draftMatchStatus"), match_status || "");
+  document.getElementById("draftVendorEmail").value = "";
+  document.getElementById("draftOutput").style.display = "none";
+  setMsg(document.getElementById("draftMsg"), "Prefilled from row above — review and click Draft reply.");
+
+  const draftAccordion = document.getElementById("acc-draft");
+  draftAccordion.open = true;
+  draftAccordion.scrollIntoView({behavior: "smooth", block: "start"});
+  document.getElementById("draftInvoice").focus();
+}
+
+function pcSwitchType() {
+  const type = document.querySelector('input[name="pcType"]:checked').value;
+  document.getElementById("pcGroupImage").style.display = type === "image" ? "block" : "none";
+  document.getElementById("pcGroupText").style.display = type === "text" ? "block" : "none";
+  document.getElementById("pcGroupPdf").style.display = type === "pdf" ? "block" : "none";
+  document.getElementById("pcGroupExcel").style.display = type === "excel" ? "block" : "none";
+}
+
+function pcSwitchTextMode() {
+  const mode = document.querySelector('input[name="pcTextMode"]:checked').value;
+  const label = document.getElementById("pcTextValueLabel");
+  const input = document.getElementById("pcTextValue");
+  if (mode === "number") {
+    label.textContent = "Invoice or RFP number";
+    input.placeholder = "e.g. INV-00123 or RFP-4521";
+  } else {
+    label.textContent = "Pasted email / free text";
+    input.placeholder = "Paste the vendor's email or invoice text here";
+  }
+}
+
+// Editable fields on a Payment Category result row -- these are the only
+// ones a hand-correction makes sense for. Ledger Ref. / Match /
+// Confidence / Source are computed, not user-correctable.
+const PC_EDITABLE_FIELDS = ["Vendor", "Invoice No.", "RFP No.", "Amount", "Date", "Due Date", "Status",
+                            "Remaining Amt. (LCY)", "Remaining Amount Sales Invoice"];
+let pcLastSourceContext = {source_document: "", input_type: ""};
+
+async function runPaymentCategory() {
+  const msg = document.getElementById("pcMsg");
+  const warningsEl = document.getElementById("pcWarnings");
+  const resultsWrap = document.getElementById("pcResultsWrap");
+  const downloadBtn = document.getElementById("pcDownloadBtn");
+  const correctionNote = document.getElementById("pcCorrectionNote");
+  warningsEl.innerHTML = "";
+  resultsWrap.style.display = "none";
+  downloadBtn.style.display = "none";
+  correctionNote.style.display = "none";
+
+  const ledger_path = document.getElementById("pcLedgerPath").value;
+  const input_type = document.querySelector('input[name="pcType"]:checked').value;
+  if (!ledger_path) { setMsg(msg, "Error: Vendor Ledger file path is required", true); return; }
+
+  const body = {input_type, ledger_path};
+  let source_document = "";
+  if (input_type === "image") {
+    body.image_path = document.getElementById("pcImagePath").value;
+    source_document = body.image_path;
+    setMsg(msg, "Reading image and extracting fields via Claude (Sonnet, low effort)...");
+  } else if (input_type === "text") {
+    body.text_mode = document.querySelector('input[name="pcTextMode"]:checked').value;
+    body.text_value = document.getElementById("pcTextValue").value;
+    source_document = body.text_mode === "number" ? body.text_value : "pasted text";
+    setMsg(msg, body.text_mode === "number" ? "Looking up number directly (no Claude call)..." : "Extracting fields via Claude (Sonnet, low effort)...");
+  } else if (input_type === "pdf") {
+    body.file_path = document.getElementById("pcPdfPath").value;
+    source_document = body.file_path;
+    setMsg(msg, "Parsing PDF and matching directly (no Claude call)...");
+  } else if (input_type === "excel") {
+    body.file_path = document.getElementById("pcExcelPath").value;
+    source_document = body.file_path;
+    setMsg(msg, "Parsing Excel and matching directly (no Claude call)...");
+  }
+  pcLastSourceContext = {source_document, input_type: input_type.charAt(0).toUpperCase() + input_type.slice(1)};
+
+  const data = await post("/api/payment-category/run", body);
+  if (data.error) { setMsg(msg, "Error: " + data.error, true); return; }
+
+  setMsg(msg, `Done. ${data.records.length} record(s) processed.`);
+
+  if (data.warnings && data.warnings.length) {
+    const box = document.createElement("div");
+    box.className = "warn-note";
+    box.innerHTML = data.warnings.map(w => `<div>⚠ ${w}</div>`).join("");
+    warningsEl.appendChild(box);
+  }
+
+  const tbody = document.querySelector("#pcResultsTable tbody");
+  tbody.innerHTML = "";
+  data.records.forEach((r, idx) => {
+    const tr = document.createElement("tr");
+    tr.dataset.rowIndex = idx;
+    const confClass = "confidence-" + String(r["Confidence"]).replace(" ", "-");
+    const editableCells = PC_EDITABLE_FIELDS.map(f =>
+      `<td><input class="cell-edit" data-field="${f}" data-original="${(r[f] ?? "").toString().replace(/"/g,"&quot;")}" value="${r[f] ?? ""}"></td>`
+    ).join("");
+    tr.innerHTML = `
+      ${editableCells}
+      <td>${r["Ledger Ref."] || ""}</td>
+      <td>${r["Match"]}</td>
+      <td><span class="confidence-badge ${confClass}">${r["Confidence"]} (${r["Confidence Score"]})</span></td>
+      <td>${r["Source"]}</td>
+      <td class="actions">
+        <button class="btn btn-secondary btn-small" onclick="pcSaveCorrections(${idx}, this)">Save correction</button>
+        <button class="btn btn-secondary btn-small" onclick='quickDraftReply(${JSON.stringify(r["Invoice No."] || "")}, ${JSON.stringify(r["RFP No."] || "")}, ${JSON.stringify(r["Status"] || "")}, ${JSON.stringify(r["Match"] === "Yes" ? "Matched" : "Discrepancy")})'>Draft reply</button>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+  resultsWrap.style.display = "block";
+  correctionNote.style.display = "block";
+  correctionNote.textContent = "See a wrong field above? Edit it directly in the table and click \"Save correction\" — it's added to the Corrections Log and can later be approved into AI Learning.";
+
+  // Store result for Download button — don't populate Detect Corrections yet
+  const dlBtn = document.getElementById("pcDownloadBtn");
+  dlBtn.dataset.filename   = data.excel_filename || "";
+  dlBtn.dataset.outputPath = data.output_path    || "";
+  dlBtn.style.display = "inline-flex";
+}
+
+async function pcSaveCorrections(rowIndex, buttonEl) {
+  const tr = buttonEl.closest("tr");
+  const invoice_no = tr.querySelector('input[data-field="Invoice No."]').value;
+  const rfp_no = tr.querySelector('input[data-field="RFP No."]').value;
+  const user = userNameInput.value;
+  const inputs = tr.querySelectorAll("input.cell-edit");
+  const toSave = [];
+  inputs.forEach(input => {
+    const original = input.dataset.original || "";
+    const current = input.value || "";
+    if (current !== original) {
+      toSave.push({field: input.dataset.field, old_value: original, new_value: current});
+      input.classList.add("dirty");
+    }
+  });
+  if (!toSave.length) {
+    buttonEl.textContent = "No changes";
+    setTimeout(() => { buttonEl.textContent = "Save correction"; }, 1500);
+    return;
+  }
+  buttonEl.disabled = true;
+  buttonEl.textContent = "Saving...";
+  for (const c of toSave) {
+    await post("/api/payment-category/correct", {
+      field: c.field, old_value: c.old_value, new_value: c.new_value,
+      invoice_no, rfp_no, user,
+      source_document: pcLastSourceContext.source_document,
+      input_type: pcLastSourceContext.input_type,
+    });
+  }
+  inputs.forEach(input => { input.dataset.original = input.value; });
+  buttonEl.disabled = false;
+  buttonEl.textContent = `Saved (${toSave.length})`;
+  loadCorrections(true);
+}
+
+// ---------------------------------------------------------------------------
+// Payment Insights -- aggregate views over the whole ledger. No AI call;
+// everything here is computed server-side by payment_insights.py and just
+// rendered here (cards, a Chart.js chart, additional-report tables).
+// ---------------------------------------------------------------------------
+
+const PI_FILTER_FIELDS = [
+  {key: "vendor", label: "Vendor"},
+  {key: "invoice_no", label: "Invoice"},
+  {key: "amount", label: "Amount"},
+  {key: "remaining_amt_lcy", label: "Remaining Amt. (LCY)"},
+  {key: "remaining_sales_amt", label: "Sales Remaining Amount"},
+  {key: "due_date", label: "Due Date"},
+  {key: "status", label: "Status"},
+];
+
+let piChart = null;
+let piLastData = null;
+
+function piUseSameLedger() {
+  document.getElementById("piLedgerPath").value = document.getElementById("pcLedgerPath").value;
+  checkLedgerCache("piLedgerPath", "piCacheStatus");
+}
+
+function piBuildFilterGrid(options) {
+  const grid = document.getElementById("piFilterGrid");
+  grid.innerHTML = "";
+  PI_FILTER_FIELDS.forEach(f => {
+    const wrap = document.createElement("div");
+    const values = options[f.key] || [];
+    const opts = values.map(v => `<option value="${v.replace(/"/g, "&quot;")}">${v}</option>`).join("");
+    wrap.innerHTML = `<label>${f.label}</label><select multiple size="5" class="multi-select" data-filter-field="${f.key}">${opts}</select>`;
+    grid.appendChild(wrap);
+  });
+}
+
+function piGetSelectedFilters() {
+  const filters = {};
+  document.querySelectorAll('#piFilterGrid select[data-filter-field]').forEach(sel => {
+    const values = Array.from(sel.selectedOptions).map(o => o.value);
+    if (values.length) filters[sel.dataset.filterField] = values;
+  });
+  return filters;
+}
+
+async function piRunWithFilters(filters) {
+  const ledger_path = document.getElementById("piLedgerPath").value;
+  const msg = document.getElementById("piMsg");
+  if (!ledger_path) { setMsg(msg, "Error: Vendor Ledger file path is required", true); return; }
+  setMsg(msg, "Computing insights over the ledger...");
+  const data = await post("/api/payment-insights/run", {ledger_path, filters: filters || {}});
+  if (data.error) { setMsg(msg, "Error: " + data.error, true); return; }
+  setMsg(msg, `Done. ${data.row_count} of ${data.total_row_count} ledger row(s) in view.`);
+  piLastData = data;
+  document.getElementById("piFiltersWrap").style.display = "block";
+  piBuildFilterGrid(data.filter_options);
+  // Re-apply the user's current selections onto the freshly-built dropdowns
+  // (options are always built from the full unfiltered ledger).
+  for (const [field, values] of Object.entries(filters || {})) {
+    const sel = document.querySelector(`#piFilterGrid select[data-filter-field="${field}"]`);
+    if (!sel) continue;
+    for (const opt of sel.options) opt.selected = values.includes(opt.value);
+  }
+  piRenderResults(data);
+}
+
+function piRun() { piRunWithFilters({}); }
+function piApplyFilters() { piRunWithFilters(piGetSelectedFilters()); }
+function piResetFilters() {
+  document.querySelectorAll('#piFilterGrid select[data-filter-field]').forEach(sel => {
+    for (const opt of sel.options) opt.selected = false;
+  });
+  piRunWithFilters({});
+}
+
+function piRenderResults(data) {
+  document.getElementById("piResultsWrap").style.display = "block";
+  document.getElementById("piRowCountNote").textContent =
+    `${data.row_count} of ${data.total_row_count} ledger row(s) match the current filters.`;
+
+  const cardsEl = document.getElementById("piCards");
+  cardsEl.innerHTML = "";
+  const chartCategorySelect = document.getElementById("piChartCategory");
+  chartCategorySelect.innerHTML = "";
+
+  Object.entries(data.categories).forEach(([key, cat]) => {
+    const card = document.createElement("div");
+    card.className = "pi-card";
+    card.innerHTML = `
+      <div class="pi-card-label">${cat.label}</div>
+      <div class="pi-card-count">${cat.count}</div>
+      <div class="pi-card-total">Remaining Amt. (LCY): ${cat.total_lcy.toLocaleString()}</div>
+      <div class="pi-card-rows" id="pi-rows-${key}" style="display:none;"></div>
+    `;
+    card.addEventListener("click", () => piToggleCardRows(key, cat));
+    cardsEl.appendChild(card);
+
+    const opt = document.createElement("option");
+    opt.value = key;
+    opt.textContent = cat.label;
+    chartCategorySelect.appendChild(opt);
+  });
+
+  const reportsEl = document.getElementById("piReports");
+  reportsEl.innerHTML = "";
+  Object.entries(data.additional_reports).forEach(([key, rep]) => {
+    const block = document.createElement("details");
+    block.className = "pi-report-block";
+    const count = rep.rows ? rep.rows.length : rep.pairs.length;
+    let inner = "";
+    if (rep.pairs) {
+      inner = `<table class="data-table"><thead><tr><th>Vendor</th><th>Total Remaining Amt. (LCY)</th></tr></thead><tbody>` +
+        rep.pairs.map(p => `<tr><td>${p.vendor}</td><td>${p.total_lcy.toLocaleString()}</td></tr>`).join("") +
+        `</tbody></table>`;
+    } else {
+      inner = piRowsTableHtml(rep.rows);
+    }
+    block.innerHTML = `<summary>${rep.label} (${count})</summary><div class="table-wrap"><div class="table-scroll">${inner}</div></div>`;
+    reportsEl.appendChild(block);
+  });
+
+  const downloadLink = document.getElementById("piDownloadLink");
+  if (data.excel_filename) {
+    downloadLink.href = `/api/payment-insights/download/${data.excel_filename}`;
+    downloadLink.style.display = "inline-flex";
+  }
+
+  piRenderChart();
+}
+
+function piRowsTableHtml(rows) {
+  if (!rows.length) return "<p class=\"muted\">No rows.</p>";
+  const cols = Object.keys(rows[0]);
+  return `<table class="data-table"><thead><tr>${cols.map(c => `<th>${c}</th>`).join("")}</tr></thead><tbody>` +
+    rows.map(r => `<tr>${cols.map(c => `<td>${r[c] ?? ""}</td>`).join("")}</tr>`).join("") +
+    `</tbody></table>`;
+}
+
+function piToggleCardRows(key, cat) {
+  const el = document.getElementById(`pi-rows-${key}`);
+  if (el.style.display === "none") {
+    el.innerHTML = piRowsTableHtml(cat.rows);
+    el.style.display = "block";
+  } else {
+    el.style.display = "none";
+  }
+}
+
+function piRenderChart() {
+  if (!piLastData) return;
+  const key = document.getElementById("piChartCategory").value;
+  const chartType = document.getElementById("piChartType").value;
+  const cat = piLastData.categories[key];
+  if (!cat) return;
+  const chart = cat.chart;
+  // Chart.js has no native "histogram" type -- render it as a bar chart of
+  // the same already-bucketed labels/values, which is what a histogram is
+  // here (the buckets are computed server-side, not raw unbinned samples).
+  const type = chartType === "histogram" ? "bar" : chartType;
+
+  const ctx = document.getElementById("piChartCanvas").getContext("2d");
+  if (piChart) piChart.destroy();
+  piChart = new Chart(ctx, {
+    type,
+    data: {
+      labels: chart.labels,
+      datasets: [{
+        label: cat.label,
+        data: chart.values,
+        backgroundColor: ["#15803D", "#38BDF8", "#D6237A", "#F59E0B", "#2563EB", "#86EFAC", "#A3E635", "#0F5C2C"],
+        borderColor: "#15803D",
+        fill: type === "line" ? false : true,
+      }],
+    },
+    options: {
+      responsive: true,
+      plugins: {legend: {display: type === "pie"}},
+      scales: type === "pie" ? {} : {y: {beginAtZero: true}},
+    },
+  });
+}
+
+async function checkClaudeHealth() {
+  const chip = document.getElementById("claudeStatusChip");
+  if (!chip) return;
+  chip.className = "claude-chip chip-checking";
+  chip.textContent = "Claude…";
+  try {
+    const d = await get("/api/claude-health");
+    chip.title = d.message || "";
+    if (d.status === "connected") {
+      chip.textContent = d.tier === "api" ? "Claude: API"
+                       : d.tier === "cli" ? "Claude: CLI"
+                       : `Claude: ${d.tier}`;
+      chip.className = "claude-chip chip-ok";
+    } else if (d.status === "not_installed") {
+      chip.textContent = "Claude: not installed";
+      chip.className = "claude-chip chip-err";
+    } else if (d.status === "not_authenticated") {
+      chip.textContent = "Claude: not logged in";
+      chip.className = "claude-chip chip-warn";
+    } else {
+      chip.textContent = "Claude: error";
+      chip.className = "claude-chip chip-warn";
+    }
+  } catch (_) {
+    chip.textContent = "Claude: unknown";
+    chip.title = "Could not reach the health endpoint";
+    chip.className = "claude-chip chip-warn";
+  }
+}
+checkClaudeHealth();
+
+// initial load
+loadCorrections(true);
+loadProposals();
+
+async function clearLedgerCache() {
+  const btn = document.getElementById("clearCacheBtn");
+  const msg = document.getElementById("clearCacheMsg");
+  btn.disabled = true;
+  msg.style.color = "var(--color-text-muted)";
+  msg.textContent = "Clearing…";
+
+  try {
+    const res = await fetch(API + "/api/clear-ledger-cache", {method: "POST"});
+    const d = await res.json();
+    msg.textContent = d.message || "Done.";
+    msg.style.color = d.errors && d.errors.length ? "#b45309" : "#2e7d32";
+
+    // Refresh any visible cache status badges so they update to "Not cached"
+    ["bcPath", "pcLedgerPath", "piLedgerPath"].forEach(id => {
+      const inputId   = id;
+      const statusMap = {bcPath: "bcCacheStatus", pcLedgerPath: "pcCacheStatus", piLedgerPath: "piCacheStatus"};
+      checkLedgerCache(inputId, statusMap[id]);
+    });
+  } catch (e) {
+    msg.style.color = "#b45309";
+    msg.textContent = "Error: " + e.message;
+  } finally {
+    btn.disabled = false;
+    setTimeout(() => { msg.textContent = ""; }, 4000);
+  }
+}
+</script>
+
+</body>
+</html>
