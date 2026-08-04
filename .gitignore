@@ -1,4 +1,5 @@
 # Generated data — all contain real financial/vendor content
+/tests
 data/ledger_cache/
 data/snapshots/
 data/payment_category/
