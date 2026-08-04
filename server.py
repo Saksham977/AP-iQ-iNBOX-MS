@@ -1511,7 +1511,19 @@ def payment_category_correct():
 
 
 if __name__ == "__main__":
+    import threading
+    import webbrowser
+
     os.makedirs(SNAPSHOTS_DIR, exist_ok=True)
     os.makedirs(PROPOSALS_DIR, exist_ok=True)
     os.makedirs(PAYMENT_CATEGORY_DIR, exist_ok=True)
-    app.run(debug=True, port=5000)
+
+    # Open the dashboard in the default browser ~1 s after Flask has started.
+    def _open_browser():
+        import time
+        time.sleep(1.2)
+        webbrowser.open("http://localhost:5000")
+
+    threading.Thread(target=_open_browser, daemon=True).start()
+    print("AP iQ iNBOX — opening http://localhost:5000 …", flush=True)
+    app.run(debug=False, port=5000)
